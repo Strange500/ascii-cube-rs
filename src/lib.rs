@@ -1,9 +1,4 @@
 use core::f32;
-use std::{
-    io::{self, Write},
-    thread,
-    time::Duration,
-};
 use wasm_bindgen::prelude::*;
 
 use glam::Vec3;
@@ -176,8 +171,8 @@ impl Engine {
         }
 
         self.c += 0.01;
-        self.a += 0.01;
-        self.b += 0.01;
+        self.a += 0.0075;
+        self.b += 0.005;
 
         return self.render_buffer_to_string();
     }
