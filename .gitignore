@@ -1,5 +1,8 @@
 /target
 
+# WebAssembly build artifacts
+/pkg
+
 # Devenv
 .devenv*
 devenv.local.nix
