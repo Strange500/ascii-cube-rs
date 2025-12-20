@@ -1,3 +1,4 @@
+use core::f32;
 use std::{
     io::{self, Write},
     thread,
@@ -41,8 +42,8 @@ impl Engine {
             height,
             width,
             points: Vec::new(),
-            z_buffer: vec![0.0; size],
-            distance_from_camera: 4.0,
+            z_buffer: vec![f32::NEG_INFINITY; size],
+            distance_from_camera: 100.0,
             a: 0.0,
             b: 0.0,
             c: 0.0,
@@ -150,9 +151,9 @@ impl Engine {
 
     pub fn render_frame(&mut self) -> String {
         self.buffer_display.fill(' ');
-        self.z_buffer.fill(0.0);
+        self.z_buffer.fill(f32::NEG_INFINITY);
 
-        let k1 = 30.0;
+        let k1 = 1000.0;
 
         for p in self.points.iter() {
             let rot = get_cube_rotation_matrice(self.a, self.b, self.c, p.pos.x, p.pos.y, p.pos.z);
