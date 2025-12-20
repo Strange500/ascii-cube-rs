@@ -28,10 +28,18 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: 'latest'
 
       - name: Build WebAssembly
         run: wasm-pack build --target web --out-dir pkg
+
+      - name: Prepare deployment directory
+        run: |
+          mkdir -p _site
+          cp index.html _site/
+          cp -r pkg _site/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -39,7 +47,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: '_site'
 
   deploy:
     environment:
