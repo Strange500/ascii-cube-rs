@@ -55,9 +55,9 @@ struct Engine {
     points: Vec<Point>,
     z_buffer: Vec<f32>,
     distance_from_camera: f32,
-    A: f32,
-    B: f32,
-    C: f32,
+    a: f32,
+    b: f32,
+    c: f32,
 }
 
 impl Engine {
@@ -69,9 +69,9 @@ impl Engine {
             points: Vec::new(),
             z_buffer: vec![0.0; (width * height) as usize],
             distance_from_camera: 4.0,
-            A: 0.0,
-            B: 0.0,
-            C: 0.0,
+            a: 0.0,
+            b: 0.0,
+            c: 0.0,
         }
     }
 
@@ -178,7 +178,7 @@ impl Engine {
         let k1 = 40.0;
 
         for p in self.points.iter() {
-            let rot = get_cube_rotation_matrice(self.A, self.B, self.C, p.pos.x, p.pos.y, p.pos.z);
+            let rot = get_cube_rotation_matrice(self.a, self.b, self.c, p.pos.x, p.pos.y, p.pos.z);
 
             let ooz = 1.0 / (rot.z + self.distance_from_camera);
 
@@ -197,8 +197,8 @@ impl Engine {
             }
         }
 
-        self.C += 0.04;
-        self.A += 0.02;
+        self.c += 0.04;
+        self.a += 0.02;
 
         return self.render_buffer_to_string();
     }
