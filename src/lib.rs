@@ -7,6 +7,9 @@ use wasm_bindgen::prelude::*;
 
 use glam::Vec3;
 
+// Near-plane distance threshold to prevent extreme projection values
+const NEAR_PLANE: f32 = 0.1;
+
 struct Point {
     pos: Vec3,
     character: char,
@@ -160,8 +163,7 @@ impl Engine {
             let z = rot.z + self.distance_from_camera;
             
             // Skip points that are behind or too close to the camera
-            // Using a near plane distance of 0.1 to prevent extreme projection values
-            if z <= 0.1 {
+            if z <= NEAR_PLANE {
                 continue;
             }
             
