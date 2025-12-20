@@ -36,7 +36,7 @@ struct Engine {
 impl Engine {
     pub fn new(width: usize, height: usize) -> Engine {
         let size = width * height;
-        let mut enfine = Engine {
+        let mut engine = Engine {
             buffer_display: vec![' '; size],
             height,
             width,
@@ -48,8 +48,8 @@ impl Engine {
             c: 0.0,
         };
 
-        enfine.init_cube_points();
-        enfine
+        engine.init_cube_points();
+        engine
     }
 
     fn resize(&mut self, width: usize, height: usize) {
