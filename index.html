@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Rust WASM Cube</title>
+    <style>
+      body {
+        background: #111;
+        color: #eee;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
+      /* This tag acts as our terminal screen */
+      #terminal {
+        font-family: monospace;
+        white-space: pre; /* Keeps the ASCII shape correct */
+        line-height: 10px; /* Compress lines to look square */
+        font-size: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <pre id="terminal"></pre>
+
+    <script type="module">
+      // Import the WASM init function and Engine class
+      import init, { Engine } from './pkg/cube.js';
+
+      async function run() {
+        // 1. Initialize WASM
+        await init();
+
+        // 2. Create the engine (80 width, 40 height)
+        const engine = Engine.new(160, 80);
+        const preTag = document.getElementById("terminal");
+
+        // 3. The Animation Loop
+        const renderLoop = () => {
+          // Ask Rust for the next frame string
+          preTag.innerText = engine.render_frame();
+          
+          // Request the next frame (usually 60fps)
+          requestAnimationFrame(renderLoop);
+        };
+
+        renderLoop();
+      }
+
+      run();
+    </script>
+  </body>
+</html>

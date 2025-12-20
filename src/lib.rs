@@ -3,9 +3,9 @@ use std::{
     thread,
     time::Duration,
 };
+use wasm_bindgen::prelude::*;
 
 use glam::Vec3;
-use terminal_size::terminal_size;
 
 struct Point {
     pos: Vec3,
@@ -20,38 +20,11 @@ impl Point {
         }
     }
 }
-
-fn main() {
-    let mut engine = Engine::new(80, 24);
-
-    engine.init_pyramid_points();
-
-    print!("\x1B[2J");
-
-    loop {
-        if let Some((w, h)) = terminal_size() {
-            let width = w.0 as u64;
-            let height = h.0 as u64;
-
-            if width != engine.width || height != engine.height {
-                engine.resize(width, height);
-                print!("\x1B[2J");
-            }
-        }
-
-        print!("\x1B[H");
-
-        print!("{}", engine.gen_frame());
-        io::stdout().flush().unwrap();
-
-        thread::sleep(Duration::from_millis(16));
-    }
-}
-
+#[wasm_bindgen]
 struct Engine {
     buffer_display: Vec<char>,
-    height: u64,
-    width: u64,
+    height: usize,
+    width: usize,
     points: Vec<Point>,
     z_buffer: Vec<f32>,
     distance_from_camera: f32,
@@ -59,23 +32,27 @@ struct Engine {
     b: f32,
     c: f32,
 }
-
+#[wasm_bindgen]
 impl Engine {
-    fn new(width: u64, height: u64) -> Engine {
-        Engine {
-            buffer_display: vec![' '; (width * height) as usize],
+    pub fn new(width: usize, height: usize) -> Engine {
+        let size = width * height;
+        let mut enfine = Engine {
+            buffer_display: vec![' '; size],
             height,
             width,
             points: Vec::new(),
-            z_buffer: vec![0.0; (width * height) as usize],
+            z_buffer: vec![0.0; size],
             distance_from_camera: 4.0,
             a: 0.0,
             b: 0.0,
             c: 0.0,
-        }
+        };
+
+        enfine.init_cube_points();
+        enfine
     }
 
-    fn resize(&mut self, width: u64, height: u64) {
+    fn resize(&mut self, width: usize, height: usize) {
         self.width = width;
         self.height = height;
         let size = (width * height) as usize;
@@ -171,11 +148,11 @@ impl Engine {
         );
     }
 
-    fn gen_frame(&mut self) -> String {
+    pub fn render_frame(&mut self) -> String {
         self.buffer_display.fill(' ');
         self.z_buffer.fill(0.0);
 
-        let k1 = 40.0;
+        let k1 = 50.0;
 
         for p in self.points.iter() {
             let rot = get_cube_rotation_matrice(self.a, self.b, self.c, p.pos.x, p.pos.y, p.pos.z);
@@ -197,8 +174,9 @@ impl Engine {
             }
         }
 
-        self.c += 0.04;
-        self.a += 0.02;
+        self.c += 0.01;
+        self.a += 0.01;
+        self.b += 0.01;
 
         return self.render_buffer_to_string();
     }

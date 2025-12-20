@@ -12,6 +12,7 @@
     enable = true;
     channel = "stable";
     components = [ "rustc" "cargo" "clippy" "rustfmt" "rust-analyzer" ];
+    targets = [ "wasm32-unknown-unknown" ];
   };
 
   git-hooks.hooks = {
