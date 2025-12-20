@@ -7,7 +7,9 @@ use wasm_bindgen::prelude::*;
 
 use glam::Vec3;
 
-// Near-plane distance threshold to prevent extreme projection values
+// Near-plane distance threshold to prevent extreme projection values.
+// Points closer than this would cause 1/z to become very large, leading to
+// integer overflow in screen coordinate calculations and incorrect clipping.
 const NEAR_PLANE: f32 = 0.1;
 
 struct Point {
