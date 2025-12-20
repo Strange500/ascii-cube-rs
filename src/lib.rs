@@ -41,7 +41,7 @@ impl Engine {
             height,
             width,
             points: Vec::new(),
-            z_buffer: vec![0.0; size],
+            z_buffer: vec![f32::NEG_INFINITY; size],
             distance_from_camera: 4.0,
             a: 0.0,
             b: 0.0,
@@ -57,7 +57,7 @@ impl Engine {
         self.height = height;
         let size = (width * height) as usize;
         self.buffer_display = vec![' '; size];
-        self.z_buffer = vec![0.0; size];
+        self.z_buffer = vec![f32::NEG_INFINITY; size];
     }
 
     fn add_point(&mut self, p: Point) {
@@ -150,14 +150,21 @@ impl Engine {
 
     pub fn render_frame(&mut self) -> String {
         self.buffer_display.fill(' ');
-        self.z_buffer.fill(0.0);
+        self.z_buffer.fill(f32::NEG_INFINITY);
 
         let k1 = 30.0;
 
         for p in self.points.iter() {
             let rot = get_cube_rotation_matrice(self.a, self.b, self.c, p.pos.x, p.pos.y, p.pos.z);
 
-            let ooz = 1.0 / (rot.z + self.distance_from_camera);
+            let z = rot.z + self.distance_from_camera;
+            
+            // Skip points that are behind or too close to the camera
+            if z <= 0.0 {
+                continue;
+            }
+            
+            let ooz = 1.0 / z;
 
             let xp = (self.width as f32 / 2.0 + k1 * ooz * rot.x * 2.0) as i32;
             let yp = (self.height as f32 / 2.0 + k1 * ooz * rot.y) as i32;
