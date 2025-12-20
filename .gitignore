@@ -1,5 +1,11 @@
 /target
 
+# WebAssembly build artifacts
+/pkg
+
+# GitHub Pages deployment directory
+/_site
+
 # Devenv
 .devenv*
 devenv.local.nix
