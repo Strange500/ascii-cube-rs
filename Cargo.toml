@@ -6,6 +6,7 @@ edition = "2024"
 [lib]
 crate-type = ["cdylib"]
 
+# Disable wasm-opt optimization to avoid download failures in restricted environments
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = false
 

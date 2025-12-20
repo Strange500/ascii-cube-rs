@@ -160,7 +160,8 @@ impl Engine {
             let z = rot.z + self.distance_from_camera;
             
             // Skip points that are behind or too close to the camera
-            if z <= 0.0 {
+            // Using epsilon to handle floating-point precision issues
+            if z <= f32::EPSILON {
                 continue;
             }
             
