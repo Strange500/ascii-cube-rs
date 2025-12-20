@@ -1,9 +1,3 @@
-use core::f32;
-use std::{
-    io::{self, Write},
-    thread,
-    time::Duration,
-};
 use wasm_bindgen::prelude::*;
 
 use glam::Vec3;
@@ -37,7 +31,7 @@ struct Engine {
 impl Engine {
     pub fn new(width: usize, height: usize) -> Engine {
         let size = width * height;
-        let mut enfine = Engine {
+        let mut engine = Engine {
             buffer_display: vec![' '; size],
             height,
             width,
@@ -49,8 +43,8 @@ impl Engine {
             c: 0.0,
         };
 
-        enfine.init_cube_points();
-        enfine
+        engine.init_cube_points();
+        engine
     }
 
     fn resize(&mut self, width: usize, height: usize) {
@@ -58,7 +52,7 @@ impl Engine {
         self.height = height;
         let size = (width * height) as usize;
         self.buffer_display = vec![' '; size];
-        self.z_buffer = vec![0.0; size];
+        self.z_buffer = vec![f32::NEG_INFINITY; size];
     }
 
     fn add_point(&mut self, p: Point) {
@@ -194,19 +188,21 @@ impl Engine {
     }
 }
 
-fn get_cube_rotation_matrice(A: f32, B: f32, C: f32, i: f32, j: f32, k: f32) -> Vec3 {
-    let (sin_a, cos_a) = A.sin_cos();
-    let (sin_b, cos_b) = B.sin_cos();
-    let (sin_c, cos_c) = C.sin_cos();
+fn get_cube_rotation_matrice(a: f32, b: f32, c: f32, i: f32, j: f32, k: f32) -> Vec3 {
+    let (sin_a, cos_a) = a.sin_cos();
+    let (sin_b, cos_b) = b.sin_cos();
+    let (sin_c, cos_c) = c.sin_cos();
 
+    // Rotation matrix for ZYX Euler angles (Rz(c) * Ry(b) * Rx(a))
+    // Applied to point (i, j, k)
+    // x' = i*(cos_b*cos_c) + j*(sin_a*sin_b*cos_c - cos_a*sin_c) + k*(cos_a*sin_b*cos_c + sin_a*sin_c)
+    // y' = i*(cos_b*sin_c) + j*(sin_a*sin_b*sin_c + cos_a*cos_c) + k*(cos_a*sin_b*sin_c - sin_a*cos_c)
+    // z' = i*(-sin_b) + j*(sin_a*cos_b) + k*(cos_a*cos_b)
     glam::vec3(
-        j * sin_a * cos_c - k * cos_a * sin_b * cos_c
-            + j * cos_a * sin_c
-            + k * sin_a * sin_c
-            + i * cos_b * cos_c,
-        j * cos_a * cos_c + k * sin_a * cos_c - j * sin_a * sin_b * sin_c
-            + k * cos_a * sin_b * sin_c
-            - i * cos_b * sin_c,
-        k * cos_a * sin_b - j * sin_a * cos_b + i * sin_b,
+        i * cos_b * cos_c + j * (sin_a * sin_b * cos_c - cos_a * sin_c)
+            + k * (cos_a * sin_b * cos_c + sin_a * sin_c),
+        i * cos_b * sin_c + j * (sin_a * sin_b * sin_c + cos_a * cos_c)
+            + k * (cos_a * sin_b * sin_c - sin_a * cos_c),
+        -i * sin_b + j * sin_a * cos_b + k * cos_a * cos_b,
     )
 }
