@@ -69,8 +69,8 @@ impl Engine {
         let step = 2.0 / (dots_per_face as f32);
 
         let mut add_face = |fixed_axis: usize, fixed_val: f32, character: char| {
-            for i in 0..dots_per_face {
-                for j in 0..dots_per_face {
+            for i in 0..=dots_per_face {
+                for j in 0..=dots_per_face {
                     let u = -1.0 + (i as f32) * step;
                     let v = -1.0 + (j as f32) * step;
                     let (x, y, z) = match fixed_axis {
@@ -152,7 +152,7 @@ impl Engine {
         self.buffer_display.fill(' ');
         self.z_buffer.fill(0.0);
 
-        let k1 = 50.0;
+        let k1 = 30.0;
 
         for p in self.points.iter() {
             let rot = get_cube_rotation_matrice(self.a, self.b, self.c, p.pos.x, p.pos.y, p.pos.z);
