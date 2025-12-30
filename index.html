@@ -30,23 +30,40 @@
       import init, { Engine } from './pkg/cube.js';
 
       async function run() {
-        // 1. Initialize WASM
         await init();
-
-        // 2. Create the engine (80 width, 40 height)
         const engine = Engine.new(180, 90);
         const preTag = document.getElementById("terminal");
 
-        // 3. The Animation Loop
-        const renderLoop = () => {
-          // Ask Rust for the next frame string
-          preTag.innerText = engine.render_frame();
-          
-          // Request the next frame (usually 60fps)
-          requestAnimationFrame(renderLoop);
+        // CONFIGURATION
+        const TARGET_FPS = 60;
+        const STEP_TIME = 1000 / TARGET_FPS; // ~16.6ms per step
+
+        let lastTime = performance.now();
+        let accumulator = 0;
+
+        const renderLoop = (currentTime) => {
+            // 1. Calculate how much time passed since last frame (Delta Time)
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+
+            // 2. Add that time to our "accumulator" bucket
+            accumulator += deltaTime;
+
+            // 3. "Eat" the time in the accumulator by running fixed math steps
+            // This ensures engine.rotate() always runs exactly 60 times per second
+            // regardless of screen refresh rate.
+            while (accumulator >= STEP_TIME) {
+                engine.rotate();
+                accumulator -= STEP_TIME;
+            }
+
+            // 4. Render the visual state
+            preTag.innerText = engine.render_frame();
+
+            requestAnimationFrame(renderLoop);
         };
 
-        renderLoop();
+        requestAnimationFrame(renderLoop);
       }
 
       run();

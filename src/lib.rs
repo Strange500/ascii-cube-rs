@@ -170,11 +170,13 @@ impl Engine {
             }
         }
 
+        return self.render_buffer_to_string();
+    }
+
+    pub fn rotate(&mut self) {
         self.c += 0.01;
         self.a += 0.0075;
         self.b += 0.005;
-
-        return self.render_buffer_to_string();
     }
 
     fn render_buffer_to_string(&self) -> String {
