@@ -17,10 +17,10 @@ impl Point {
     }
 }
 #[wasm_bindgen]
-struct Engine {
+pub struct Engine {
     buffer_display: Vec<char>,
-    height: usize,
-    width: usize,
+    pub height: usize,
+    pub width: usize,
     points: Vec<Point>,
     z_buffer: Vec<f32>,
     distance_from_camera: f32,
@@ -48,7 +48,7 @@ impl Engine {
         engine
     }
 
-    fn resize(&mut self, width: usize, height: usize) {
+    pub fn resize(&mut self, width: usize, height: usize) {
         self.width = width;
         self.height = height;
         let size = (width * height) as usize;
@@ -60,7 +60,7 @@ impl Engine {
         self.points.push(p);
     }
 
-    fn init_cube_points(&mut self) {
+    pub fn init_cube_points(&mut self) {
         let dots_per_face: u64 = 100;
         let step = 2.0 / (dots_per_face as f32);
 
@@ -87,7 +87,7 @@ impl Engine {
         add_face(2, -1.0, '+'); // Derrière
     }
 
-    fn init_pyramid_points(&mut self) {
+    pub fn init_pyramid_points(&mut self) {
         let dots_per_face: u64 = 100;
 
         let step = 1.0 / (dots_per_face as f32);
