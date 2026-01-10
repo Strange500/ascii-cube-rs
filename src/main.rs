@@ -9,6 +9,18 @@ use std::{
 use terminal_size::terminal_size;
 
 #[cfg(not(target_arch = "wasm32"))]
+fn calculate_speed_from_price(price: f32) -> f32 {
+    let target_price = 100_000.0;
+    let min_price = 0.0;
+    let min_speed = 0.5;
+    let max_speed = 50.0;
+
+    let factor = (price - min_price) / (target_price - min_price);
+    let factor = factor.clamp(0.0, 1.0);
+    min_speed + (factor * factor * (max_speed - min_speed))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() {
     let mut engine = Engine::new(80, 24);
@@ -27,16 +39,7 @@ async fn main() {
     println!("Price: ${}", price);
     thread::sleep(Duration::from_secs(1));
 
-    let speed = {
-        let target_price = 100_000.0;
-        let min_price = 0.0;
-        let min_speed = 0.5;
-        let max_speed = 50.0;
-
-        let factor = (price - min_price) / (target_price - min_price);
-        let factor = factor.clamp(0.0, 1.0);
-        min_speed + (factor * factor * (max_speed - min_speed))
-    };
+    let speed = calculate_speed_from_price(price);
 
     engine.init_pyramid_points();
 
@@ -53,12 +56,14 @@ async fn main() {
 
     // Price Update Loop - Periodically fetch Bitcoin price and update speed
     let _price_updater_thread = thread::spawn(move || {
+        // Create runtime once outside the loop
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        
         loop {
             // Sleep for 60 seconds before fetching the price again
             thread::sleep(Duration::from_secs(60));
             
             // Fetch the new price
-            let runtime = tokio::runtime::Runtime::new().unwrap();
             let new_price = runtime.block_on(async {
                 match get_bitcoin_price().await {
                     Ok(p) => Some(p),
@@ -71,14 +76,7 @@ async fn main() {
             
             if let Some(price) = new_price {
                 // Calculate new speed based on the updated price
-                let target_price = 100_000.0;
-                let min_price = 0.0;
-                let min_speed = 0.5;
-                let max_speed = 50.0;
-
-                let factor = (price - min_price) / (target_price - min_price);
-                let factor = factor.clamp(0.0, 1.0);
-                let new_speed = min_speed + (factor * factor * (max_speed - min_speed));
+                let new_speed = calculate_speed_from_price(price);
                 
                 // Update the shared speed
                 let mut speed = speed_for_updater.lock().unwrap();
@@ -109,7 +107,7 @@ async fn main() {
     });
 
     // Rotation Loop
-    let _rotate_thread = thread::spawn(move || {
+    let rotate_thread = thread::spawn(move || {
         loop {
             {
                 let mut eng = engine_rotate.lock().unwrap();
@@ -121,6 +119,7 @@ async fn main() {
     });
 
     render_thread.join().unwrap();
+    rotate_thread.join().unwrap();
 }
 
 // Dummy main for Wasm to satisfy the compiler if building as a binary
