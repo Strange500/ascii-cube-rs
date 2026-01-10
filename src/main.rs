@@ -45,6 +45,47 @@ async fn main() {
     let engine = std::sync::Arc::new(std::sync::Mutex::new(engine));
     let engine_render = engine.clone();
     let engine_rotate = engine.clone();
+    
+    // Shared speed state that can be updated by the price fetcher thread
+    let speed_shared = std::sync::Arc::new(std::sync::Mutex::new(speed));
+    let speed_for_rotate = speed_shared.clone();
+    let speed_for_updater = speed_shared.clone();
+
+    // Price Update Loop - Periodically fetch Bitcoin price and update speed
+    let _price_updater_thread = thread::spawn(move || {
+        loop {
+            // Sleep for 60 seconds before fetching the price again
+            thread::sleep(Duration::from_secs(60));
+            
+            // Fetch the new price
+            let runtime = tokio::runtime::Runtime::new().unwrap();
+            let new_price = runtime.block_on(async {
+                match get_bitcoin_price().await {
+                    Ok(p) => Some(p),
+                    Err(e) => {
+                        eprintln!("Error fetching Bitcoin price: {}", e);
+                        None
+                    }
+                }
+            });
+            
+            if let Some(price) = new_price {
+                // Calculate new speed based on the updated price
+                let target_price = 100_000.0;
+                let min_price = 0.0;
+                let min_speed = 0.5;
+                let max_speed = 50.0;
+
+                let factor = (price - min_price) / (target_price - min_price);
+                let factor = factor.clamp(0.0, 1.0);
+                let new_speed = min_speed + (factor * factor * (max_speed - min_speed));
+                
+                // Update the shared speed
+                let mut speed = speed_for_updater.lock().unwrap();
+                *speed = new_speed;
+            }
+        }
+    });
 
     // Render Loop
     let render_thread = thread::spawn(move || {
@@ -68,18 +109,18 @@ async fn main() {
     });
 
     // Rotation Loop
-    let rotate_thread = thread::spawn(move || {
+    let _rotate_thread = thread::spawn(move || {
         loop {
             {
                 let mut eng = engine_rotate.lock().unwrap();
-                eng.rotate(speed);
+                let current_speed = *speed_for_rotate.lock().unwrap();
+                eng.rotate(current_speed);
             }
             thread::sleep(Duration::from_millis(16));
         }
     });
 
     render_thread.join().unwrap();
-    rotate_thread.join().unwrap();
 }
 
 // Dummy main for Wasm to satisfy the compiler if building as a binary
