@@ -1,7 +1,8 @@
 use core::f32;
-use wasm_bindgen::prelude::*;
-
 use glam::Vec3;
+use serde_json::Value;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
 
 struct Point {
     pos: Vec3,
@@ -16,7 +17,7 @@ impl Point {
         }
     }
 }
-#[wasm_bindgen]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 pub struct Engine {
     buffer_display: Vec<char>,
     pub height: usize,
@@ -28,7 +29,7 @@ pub struct Engine {
     b: f32,
     c: f32,
 }
-#[wasm_bindgen]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 impl Engine {
     pub fn new(width: usize, height: usize) -> Engine {
         let size = width * height;
@@ -173,10 +174,10 @@ impl Engine {
         return self.render_buffer_to_string();
     }
 
-    pub fn rotate(&mut self) {
-        self.c += 0.01;
-        self.a += 0.0075;
-        self.b += 0.005;
+    pub fn rotate(&mut self, speed: f32) {
+        self.c += speed * 0.01;
+        self.a += speed * 0.0075;
+        self.b += speed * 0.005;
     }
 
     fn render_buffer_to_string(&self) -> String {
@@ -205,4 +206,48 @@ fn get_cube_rotation_matrice(a: f32, b: f32, c: f32, i: f32, j: f32, k: f32) -> 
             + k * (cos_a * sin_b * sin_c - sin_a * cos_c),
         -i * sin_b + j * sin_a * cos_b + k * cos_a * cos_b,
     )
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub async fn get_bitcoin_price() -> Result<f32, JsValue> {
+    let url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd";
+
+    let window = web_sys::window().ok_or_else(|| JsValue::from_str("no window"))?;
+    let resp_value = wasm_bindgen_futures::JsFuture::from(window.fetch_with_str(url))
+        .await
+        .map_err(|_| JsValue::from_str("fetch failed"))?;
+
+    let resp: web_sys::Response = resp_value.dyn_into()?;
+    let json = wasm_bindgen_futures::JsFuture::from(resp.json()?)
+        .await
+        .map_err(|_| JsValue::from_str("json parsing failed"))?;
+
+    let price = js_sys::Reflect::get(&json, &JsValue::from_str("bitcoin"))
+        .and_then(|btc| js_sys::Reflect::get(&btc, &JsValue::from_str("usd")))
+        .ok()
+        .and_then(|val| val.as_f64())
+        .ok_or_else(|| JsValue::from_str("price not found"))?;
+
+    Ok(price as f32)
+}
+
+// -------------------------------------------------------------
+// For Native (Terminal)
+// -------------------------------------------------------------
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn get_bitcoin_price() -> Result<f32, Box<dyn std::error::Error>> {
+    let url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd";
+
+    // Reqwest handles the HTTP call in the terminal
+    let resp = reqwest::get(url).await?;
+    let json: serde_json::Value = resp.json().await?;
+
+    let price = json
+        .get("bitcoin")
+        .and_then(|btc| btc.get("usd"))
+        .and_then(|val| val.as_f64())
+        .ok_or("price not found")?;
+
+    Ok(price as f32)
 }

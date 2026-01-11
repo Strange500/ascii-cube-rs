@@ -27,12 +27,27 @@
 
     <script type="module">
       // Import the WASM init function and Engine class
-      import init, { Engine } from './pkg/cube.js';
+      import init, { Engine, get_bitcoin_price } from './pkg/cube.js';
 
       async function run() {
         await init();
         const engine = Engine.new(180, 90);
         const preTag = document.getElementById("terminal");
+
+        const price = await get_bitcoin_price();
+        let speed = (() => {
+            let target_price = 1_000_000.0;
+            let min_price = 0.0;
+            let min_speed = 0.5;
+            let max_speed = 50.0;
+            
+            let factor = (price - min_price) / (target_price - min_price);
+            factor = Math.max(0.0, Math.min(1.0, factor));
+            return min_speed + (factor * factor * (max_speed - min_speed));
+        })();
+
+        console.log("Bitcoin price: $" + price);
+
 
         // CONFIGURATION
         const TARGET_FPS = 60;
@@ -53,7 +68,7 @@
             // This ensures engine.rotate() always runs exactly 60 times per second
             // regardless of screen refresh rate.
             while (accumulator >= STEP_TIME) {
-                engine.rotate();
+                engine.rotate(speed);
                 accumulator -= STEP_TIME;
             }
 
