@@ -169,8 +169,10 @@ impl Cube {
         self.buffer_colors.fill(0);
         self.z_buffer.fill(f32::NEG_INFINITY);
 
+        let rot_mat = RotationMatrix::new(self.a, self.b, self.c);
+
         for p in self.points.iter() {
-            let rot = get_cube_rotation_matrice(self.a, self.b, self.c, p.pos.x, p.pos.y, p.pos.z);
+            let rot = rot_mat.rotate(p.pos.x, p.pos.y, p.pos.z);
             let ooz = 1.0 / (rot.z + self.distance_from_camera);
 
             let xp = (self.width as f32 / 2.0 + self.zoom * ooz * rot.x * 2.0) as i32;
@@ -204,7 +206,8 @@ impl Cube {
             _ => return false,
         };
 
-        let rot_normal = get_cube_rotation_matrice(self.a, self.b, self.c, nx, ny, nz);
+        let rot_mat = RotationMatrix::new(self.a, self.b, self.c);
+        let rot_normal = rot_mat.rotate(nx, ny, nz);
         
         // Since the camera is conceptually located at z = -distance_from_camera 
         // looking towards the +z axis, faces with a negative rotated Z normal 
@@ -258,18 +261,38 @@ impl Cube {
     }
 }
 
-fn get_cube_rotation_matrice(a: f32, b: f32, c: f32, i: f32, j: f32, k: f32) -> Vec3 {
-    let (sin_a, cos_a) = a.sin_cos();
-    let (sin_b, cos_b) = b.sin_cos();
-    let (sin_c, cos_c) = c.sin_cos();
+struct RotationMatrix {
+    m00: f32, m01: f32, m02: f32,
+    m10: f32, m11: f32, m12: f32,
+    m20: f32, m21: f32, m22: f32,
+}
 
-    glam::vec3(
-        i * cos_b * cos_c
-            + j * (sin_a * sin_b * cos_c - cos_a * sin_c)
-            + k * (cos_a * sin_b * cos_c + sin_a * sin_c),
-        i * cos_b * sin_c
-            + j * (sin_a * sin_b * sin_c + cos_a * cos_c)
-            + k * (cos_a * sin_b * sin_c - sin_a * cos_c),
-        -i * sin_b + j * sin_a * cos_b + k * cos_a * cos_b,
-    )
+impl RotationMatrix {
+    fn new(a: f32, b: f32, c: f32) -> Self {
+        let (sin_a, cos_a) = a.sin_cos();
+        let (sin_b, cos_b) = b.sin_cos();
+        let (sin_c, cos_c) = c.sin_cos();
+
+        Self {
+            m00: cos_b * cos_c,
+            m01: sin_a * sin_b * cos_c - cos_a * sin_c,
+            m02: cos_a * sin_b * cos_c + sin_a * sin_c,
+            
+            m10: cos_b * sin_c,
+            m11: sin_a * sin_b * sin_c + cos_a * cos_c,
+            m12: cos_a * sin_b * sin_c - sin_a * cos_c,
+            
+            m20: -sin_b,
+            m21: sin_a * cos_b,
+            m22: cos_a * cos_b,
+        }
+    }
+
+    fn rotate(&self, i: f32, j: f32, k: f32) -> Vec3 {
+        glam::vec3(
+            i * self.m00 + j * self.m01 + k * self.m02,
+            i * self.m10 + j * self.m11 + k * self.m12,
+            i * self.m20 + j * self.m21 + k * self.m22,
+        )
+    }
 }
