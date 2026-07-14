@@ -186,6 +186,26 @@ impl Cube {
         self.render_buffer_to_string()
     }
 
+    #[wasm_bindgen]
+    pub fn is_face_visible(&self, face_index: usize) -> bool {
+        let (nx, ny, nz) = match face_index {
+            0 => (0.0, 1.0, 0.0),  // Top
+            1 => (0.0, -1.0, 0.0), // Bottom
+            2 => (-1.0, 0.0, 0.0), // Left
+            3 => (1.0, 0.0, 0.0),  // Right
+            4 => (0.0, 0.0, 1.0),  // Front
+            5 => (0.0, 0.0, -1.0), // Back
+            _ => return false,
+        };
+
+        let rot_normal = get_cube_rotation_matrice(self.a, self.b, self.c, nx, ny, nz);
+        
+        // Since the camera is conceptually located at z = -distance_from_camera 
+        // looking towards the +z axis, faces with a negative rotated Z normal 
+        // are pointing towards the camera.
+        rot_normal.z < 0.0
+    }
+
     fn render_buffer_to_string(&self) -> String {
         let mut output = String::with_capacity((self.width * self.height * 20) as usize);
         let mut current_color: Option<u32> = None;
