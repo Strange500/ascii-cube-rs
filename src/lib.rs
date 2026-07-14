@@ -38,6 +38,7 @@ pub struct Cube {
     a: f32,
     b: f32,
     c: f32,
+    zoom: f32,
     faces: Vec<FaceConfig>,
 }
 
@@ -67,11 +68,18 @@ impl Cube {
             a: 0.0,
             b: 0.0,
             c: 0.0,
+            zoom: 1000.0,
             faces,
         };
 
         cube.generate_points();
         cube
+    }
+
+    /// Sets the zoom level (projection scale factor, default 1000.0)
+    #[wasm_bindgen]
+    pub fn set_zoom(&mut self, zoom: f32) {
+        self.zoom = zoom;
     }
 
     /// Sets the color of a specific face (0 to 5) using a hex color like "#ff0000" or "ff0000"
@@ -161,14 +169,12 @@ impl Cube {
         self.buffer_colors.fill(0);
         self.z_buffer.fill(f32::NEG_INFINITY);
 
-        let k1 = 1000.0;
-
         for p in self.points.iter() {
             let rot = get_cube_rotation_matrice(self.a, self.b, self.c, p.pos.x, p.pos.y, p.pos.z);
             let ooz = 1.0 / (rot.z + self.distance_from_camera);
 
-            let xp = (self.width as f32 / 2.0 + k1 * ooz * rot.x * 2.0) as i32;
-            let yp = (self.height as f32 / 2.0 + k1 * ooz * rot.y) as i32;
+            let xp = (self.width as f32 / 2.0 + self.zoom * ooz * rot.x * 2.0) as i32;
+            let yp = (self.height as f32 / 2.0 + self.zoom * ooz * rot.y) as i32;
 
             if xp >= 0 && xp < self.width as i32 && yp >= 0 && yp < self.height as i32 {
                 let idx = (xp + yp * self.width as i32) as usize;
