@@ -1,7 +1,5 @@
 use core::f32;
 use glam::Vec3;
-use serde_json::Value;
-#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
 struct Point {
@@ -17,11 +15,12 @@ impl Point {
         }
     }
 }
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-pub struct Engine {
+
+#[wasm_bindgen]
+pub struct Cube {
     buffer_display: Vec<char>,
-    pub height: usize,
-    pub width: usize,
+    height: usize,
+    width: usize,
     points: Vec<Point>,
     z_buffer: Vec<f32>,
     distance_from_camera: f32,
@@ -29,11 +28,13 @@ pub struct Engine {
     b: f32,
     c: f32,
 }
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-impl Engine {
-    pub fn new(width: usize, height: usize) -> Engine {
+
+#[wasm_bindgen]
+impl Cube {
+    #[wasm_bindgen(constructor)]
+    pub fn new(width: usize, height: usize) -> Cube {
         let size = width * height;
-        let mut engine = Engine {
+        let mut cube = Cube {
             buffer_display: vec![' '; size],
             height,
             width,
@@ -45,23 +46,15 @@ impl Engine {
             c: 0.0,
         };
 
-        engine.init_cube_points();
-        engine
-    }
-
-    pub fn resize(&mut self, width: usize, height: usize) {
-        self.width = width;
-        self.height = height;
-        let size = (width * height) as usize;
-        self.buffer_display = vec![' '; size];
-        self.z_buffer = vec![f32::NEG_INFINITY; size];
+        cube.init_cube_points();
+        cube
     }
 
     fn add_point(&mut self, p: Point) {
         self.points.push(p);
     }
 
-    pub fn init_cube_points(&mut self) {
+    fn init_cube_points(&mut self) {
         let dots_per_face: u64 = 100;
         let step = 2.0 / (dots_per_face as f32);
 
@@ -88,64 +81,14 @@ impl Engine {
         add_face(2, -1.0, '+'); // Derrière
     }
 
-    pub fn init_pyramid_points(&mut self) {
-        let dots_per_face: u64 = 100;
+    #[wasm_bindgen]
+    pub fn next_frame(&mut self) -> String {
+        // Increment angles for rotation
+        let speed = 1.0;
+        self.c += speed * 0.01;
+        self.a += speed * 0.0075;
+        self.b += speed * 0.005;
 
-        let step = 1.0 / (dots_per_face as f32);
-
-        let apex = glam::vec3(0.0, 1.0, 0.0);
-
-        let mut add_face = |base_p1: Vec3, base_p2: Vec3, character: char| {
-            for i in 0..dots_per_face {
-                for j in 0..dots_per_face {
-                    let u = (i as f32) * step;
-                    let v = (j as f32) * step;
-
-                    let point_on_base = base_p1 + (base_p2 - base_p1) * u;
-
-                    let point = apex + (point_on_base - apex) * v;
-
-                    self.add_point(Point::new(point.x, point.y, point.z, character));
-                }
-            }
-        };
-
-        add_face(
-            glam::vec3(-1.0, -1.0, -1.0),
-            glam::vec3(1.0, -1.0, -1.0),
-            '^',
-        );
-        add_face(glam::vec3(1.0, -1.0, -1.0), glam::vec3(1.0, -1.0, 1.0), '%'); // Right
-        add_face(glam::vec3(1.0, -1.0, 1.0), glam::vec3(-1.0, -1.0, 1.0), '&'); // Back
-        add_face(
-            glam::vec3(-1.0, -1.0, 1.0),
-            glam::vec3(-1.0, -1.0, -1.0),
-            '*',
-        );
-
-        let mut add_base = |p1: Vec3, p2: Vec3, p3: Vec3, p4: Vec3, character: char| {
-            for i in 0..dots_per_face {
-                for j in 0..dots_per_face {
-                    let u = (i as f32) * step;
-                    let v = (j as f32) * step;
-                    let start = p1 + (p2 - p1) * u;
-                    let end = p4 + (p3 - p4) * u;
-                    let point = start + (end - start) * v;
-                    self.add_point(Point::new(point.x, point.y, point.z, character));
-                }
-            }
-        };
-
-        add_base(
-            glam::vec3(-1.0, -1.0, -1.0),
-            glam::vec3(1.0, -1.0, -1.0),
-            glam::vec3(1.0, -1.0, 1.0),
-            glam::vec3(-1.0, -1.0, 1.0),
-            '.',
-        );
-    }
-
-    pub fn render_frame(&mut self) -> String {
         self.buffer_display.fill(' ');
         self.z_buffer.fill(f32::NEG_INFINITY);
 
@@ -171,13 +114,7 @@ impl Engine {
             }
         }
 
-        return self.render_buffer_to_string();
-    }
-
-    pub fn rotate(&mut self, speed: f32) {
-        self.c += speed * 0.01;
-        self.a += speed * 0.0075;
-        self.b += speed * 0.005;
+        self.render_buffer_to_string()
     }
 
     fn render_buffer_to_string(&self) -> String {
@@ -206,48 +143,4 @@ fn get_cube_rotation_matrice(a: f32, b: f32, c: f32, i: f32, j: f32, k: f32) -> 
             + k * (cos_a * sin_b * sin_c - sin_a * cos_c),
         -i * sin_b + j * sin_a * cos_b + k * cos_a * cos_b,
     )
-}
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-pub async fn get_bitcoin_price() -> Result<f32, JsValue> {
-    let url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd";
-
-    let window = web_sys::window().ok_or_else(|| JsValue::from_str("no window"))?;
-    let resp_value = wasm_bindgen_futures::JsFuture::from(window.fetch_with_str(url))
-        .await
-        .map_err(|_| JsValue::from_str("fetch failed"))?;
-
-    let resp: web_sys::Response = resp_value.dyn_into()?;
-    let json = wasm_bindgen_futures::JsFuture::from(resp.json()?)
-        .await
-        .map_err(|_| JsValue::from_str("json parsing failed"))?;
-
-    let price = js_sys::Reflect::get(&json, &JsValue::from_str("bitcoin"))
-        .and_then(|btc| js_sys::Reflect::get(&btc, &JsValue::from_str("usd")))
-        .ok()
-        .and_then(|val| val.as_f64())
-        .ok_or_else(|| JsValue::from_str("price not found"))?;
-
-    Ok(price as f32)
-}
-
-// -------------------------------------------------------------
-// For Native (Terminal)
-// -------------------------------------------------------------
-#[cfg(not(target_arch = "wasm32"))]
-pub async fn get_bitcoin_price() -> Result<f32, Box<dyn std::error::Error>> {
-    let url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd";
-
-    // Reqwest handles the HTTP call in the terminal
-    let resp = reqwest::get(url).await?;
-    let json: serde_json::Value = resp.json().await?;
-
-    let price = json
-        .get("bitcoin")
-        .and_then(|btc| btc.get("usd"))
-        .and_then(|val| val.as_f64())
-        .ok_or("price not found")?;
-
-    Ok(price as f32)
 }
