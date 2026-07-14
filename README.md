@@ -21,9 +21,9 @@ The engine generates animated ASCII frames with per-face color and optional face
 
 ## Project Structure
 
-- `/home/runner/work/ascii-cube-rs/ascii-cube-rs/src/lib.rs` – Rust cube engine and WASM exports
-- `/home/runner/work/ascii-cube-rs/ascii-cube-rs/index.html` – browser demo page
-- `/home/runner/work/ascii-cube-rs/ascii-cube-rs/example.png` – sample output image
+- `src/lib.rs` – Rust cube engine and WASM exports
+- `index.html` – browser demo page
+- `example.png` – sample output image
 
 ## Requirements
 
