@@ -1,5 +1,4 @@
-use core::f32;
-use glam::Vec3;
+use glam::{Vec3, Quat};
 use wasm_bindgen::prelude::*;
 
 #[derive(Clone)]
@@ -35,9 +34,7 @@ pub struct Cube {
     points: Vec<Point>,
     z_buffer: Vec<f32>,
     distance_from_camera: f32,
-    a: f32,
-    b: f32,
-    c: f32,
+    rotation: Quat,
     delta_a: f32,
     delta_b: f32,
     delta_c: f32,
@@ -68,9 +65,7 @@ impl Cube {
             points: Vec::new(),
             z_buffer: vec![f32::NEG_INFINITY; size],
             distance_from_camera: 100.0,
-            a: 0.0,
-            b: 0.0,
-            c: 0.0,
+            rotation: Quat::IDENTITY,
             delta_a: 0.0075,
             delta_b: 0.005,
             delta_c: 0.01,
@@ -85,9 +80,7 @@ impl Cube {
     /// Override the current rotation angles instantly
     #[wasm_bindgen]
     pub fn set_rotation(&mut self, a: f32, b: f32, c: f32) {
-        self.a = a;
-        self.b = b;
-        self.c = c;
+        self.rotation = Quat::from_euler(glam::EulerRot::XYZ, a, b, c);
     }
 
     /// Override the rotation speed (how much it turns per frame)
@@ -182,18 +175,21 @@ impl Cube {
 
     #[wasm_bindgen]
     pub fn next_frame(&mut self) -> String {
-        self.a += self.delta_a;
-        self.b += self.delta_b;
-        self.c += self.delta_c;
+        // Create global rotation deltas for X, Y, Z axes
+        let rot_x = Quat::from_rotation_x(self.delta_a);
+        let rot_y = Quat::from_rotation_y(self.delta_b);
+        let rot_z = Quat::from_rotation_z(self.delta_c);
+
+        // Left-multiply to apply rotations in the global (camera) coordinate system
+        self.rotation = rot_x * rot_y * rot_z * self.rotation;
+        self.rotation = self.rotation.normalize();
 
         self.buffer_chars.fill(' ');
         self.buffer_colors.fill(0);
         self.z_buffer.fill(f32::NEG_INFINITY);
 
-        let rot_mat = RotationMatrix::new(self.a, self.b, self.c);
-
         for p in self.points.iter() {
-            let rot = rot_mat.rotate(p.pos.x, p.pos.y, p.pos.z);
+            let rot = self.rotation * p.pos;
             let ooz = 1.0 / (rot.z + self.distance_from_camera);
 
             let xp = (self.width as f32 / 2.0 + self.zoom * ooz * rot.x * 2.0) as i32;
@@ -227,8 +223,7 @@ impl Cube {
             _ => return false,
         };
 
-        let rot_mat = RotationMatrix::new(self.a, self.b, self.c);
-        let rot_normal = rot_mat.rotate(nx, ny, nz);
+        let rot_normal = self.rotation * glam::vec3(nx, ny, nz);
         
         // Since the camera is conceptually located at z = -distance_from_camera 
         // looking towards the +z axis, faces with a negative rotated Z normal 
@@ -282,38 +277,4 @@ impl Cube {
     }
 }
 
-struct RotationMatrix {
-    m00: f32, m01: f32, m02: f32,
-    m10: f32, m11: f32, m12: f32,
-    m20: f32, m21: f32, m22: f32,
-}
 
-impl RotationMatrix {
-    fn new(a: f32, b: f32, c: f32) -> Self {
-        let (sin_a, cos_a) = a.sin_cos();
-        let (sin_b, cos_b) = b.sin_cos();
-        let (sin_c, cos_c) = c.sin_cos();
-
-        Self {
-            m00: cos_b * cos_c,
-            m01: sin_a * sin_b * cos_c - cos_a * sin_c,
-            m02: cos_a * sin_b * cos_c + sin_a * sin_c,
-            
-            m10: cos_b * sin_c,
-            m11: sin_a * sin_b * sin_c + cos_a * cos_c,
-            m12: cos_a * sin_b * sin_c - sin_a * cos_c,
-            
-            m20: -sin_b,
-            m21: sin_a * cos_b,
-            m22: cos_a * cos_b,
-        }
-    }
-
-    fn rotate(&self, i: f32, j: f32, k: f32) -> Vec3 {
-        glam::vec3(
-            i * self.m00 + j * self.m01 + k * self.m02,
-            i * self.m10 + j * self.m11 + k * self.m12,
-            i * self.m20 + j * self.m21 + k * self.m22,
-        )
-    }
-}
