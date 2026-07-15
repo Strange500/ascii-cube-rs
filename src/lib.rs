@@ -38,6 +38,9 @@ pub struct Cube {
     a: f32,
     b: f32,
     c: f32,
+    delta_a: f32,
+    delta_b: f32,
+    delta_c: f32,
     zoom: f32,
     faces: Vec<FaceConfig>,
 }
@@ -68,12 +71,31 @@ impl Cube {
             a: 0.0,
             b: 0.0,
             c: 0.0,
+            delta_a: 0.0075,
+            delta_b: 0.005,
+            delta_c: 0.01,
             zoom: 1000.0,
             faces,
         };
 
         cube.generate_points();
         cube
+    }
+
+    /// Override the current rotation angles instantly
+    #[wasm_bindgen]
+    pub fn set_rotation(&mut self, a: f32, b: f32, c: f32) {
+        self.a = a;
+        self.b = b;
+        self.c = c;
+    }
+
+    /// Override the rotation speed (how much it turns per frame)
+    #[wasm_bindgen]
+    pub fn set_rotation_speed(&mut self, da: f32, db: f32, dc: f32) {
+        self.delta_a = da;
+        self.delta_b = db;
+        self.delta_c = dc;
     }
 
     /// Sets the zoom level (projection scale factor, default 1000.0)
@@ -160,10 +182,9 @@ impl Cube {
 
     #[wasm_bindgen]
     pub fn next_frame(&mut self) -> String {
-        let speed = 1.0;
-        self.c += speed * 0.01;
-        self.a += speed * 0.0075;
-        self.b += speed * 0.005;
+        self.a += self.delta_a;
+        self.b += self.delta_b;
+        self.c += self.delta_c;
 
         self.buffer_chars.fill(' ');
         self.buffer_colors.fill(0);
