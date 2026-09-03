@@ -53,7 +53,7 @@ impl Cube {
         for i in 0..6 {
             faces.push(FaceConfig {
                 default_char: default_chars[i],
-                color: 0xffffff, // Default color white
+                color: 0x123456, // Sentinel for default theme color
                 logo: None,
                 logo_colors: None,
             });
