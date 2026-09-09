@@ -173,7 +173,7 @@ impl Cube {
                 let c = if flat_idx < logo_chars.len() { logo_chars[flat_idx] } else { b' ' };
                 let color = if flat_idx < logo_colors.len() { logo_colors[flat_idx] } else { default_color };
                 
-                let point_idx = start_idx + x * 50 + y;
+                let point_idx = start_idx + flat_idx; // same as generate_points: i * 50 + j
                 
                 let pt = &mut self.points[point_idx];
                 if c != b' ' {
