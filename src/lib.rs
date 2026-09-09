@@ -167,14 +167,19 @@ impl Cube {
         let default_char = self.faces[face_index].default_char;
         let default_color = self.faces[face_index].color;
         
-        for y in 0..50 {
-            for x in 0..50 {
-                let flat_idx = y * 50 + x;
+        // Must match generate_points_for_face exactly:
+        //   outer loop i → logo_x (image column)
+        //   inner loop j → logo_y (image row)
+        //   point_idx = start + i * 50 + j
+        let w = 50_usize;
+        let h = 50_usize;
+        for i in 0..w {          // i = image column (x)
+            for j in 0..h {      // j = image row (y)
+                let flat_idx = j * w + i; // row-major pixel at (col=i, row=j)
                 let c = if flat_idx < logo_chars.len() { logo_chars[flat_idx] } else { b' ' };
                 let color = if flat_idx < logo_colors.len() { logo_colors[flat_idx] } else { default_color };
-                
-                let point_idx = start_idx + flat_idx; // same as generate_points: i * 50 + j
-                
+
+                let point_idx = start_idx + i * w + j; // matches generate: i * 50 + j
                 let pt = &mut self.points[point_idx];
                 if c != b' ' {
                     pt.character = c;
