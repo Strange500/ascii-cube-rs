@@ -33,6 +33,7 @@ pub struct Cube {
     height: usize,
     width: usize,
     points: Vec<Point>,
+    samples_per_axis: usize,
     z_buffer: Vec<f32>,
     distance_from_camera: f32,
     rotation: Quat,
@@ -48,6 +49,9 @@ impl Cube {
     #[wasm_bindgen(constructor)]
     pub fn new(width: usize, height: usize) -> Cube {
         let size = width * height;
+        // Preserve the historical grid for existing clients; larger viewports
+        // need more surface samples to avoid skipping projected ASCII cells.
+        let samples_per_axis = if width <= 120 { 100 } else { width.min(256) };
         let mut faces = vec![];
         let default_chars = [b'@', b'$', b'~', b'#', b';', b'+'];
         for i in 0..6 {
@@ -64,7 +68,8 @@ impl Cube {
             buffer_colors: vec![0; size],
             height,
             width,
-            points: vec![Point::new(0.0, 0.0, 0.0, b' ', 0); 60000], // 100x100x6
+            points: vec![Point::new(0.0, 0.0, 0.0, b' ', 0); samples_per_axis * samples_per_axis * 6],
+            samples_per_axis,
             z_buffer: vec![f32::NEG_INFINITY; size],
             distance_from_camera: 100.0,
             rotation: Quat::IDENTITY,
@@ -159,27 +164,23 @@ impl Cube {
 
     #[wasm_bindgen]
     pub fn update_face_fast(&mut self, face_index: usize, logo_chars: &[u8], logo_colors: &[u32]) {
-        if face_index >= 6 || self.points.len() < 60000 {
+        if face_index >= 6 {
             return;
         }
         
-        let start_idx = face_index * 10000;
+        let start_idx = face_index * self.samples_per_axis * self.samples_per_axis;
         let default_char = self.faces[face_index].default_char;
         let default_color = self.faces[face_index].color;
         
-        // Must match generate_points_for_face exactly:
-        //   outer loop i → logo_x (image column)
-        //   inner loop j → logo_y (image row)
-        //   point_idx = start + i * 100 + j
-        let w = 100_usize;
-        let h = 100_usize;
-        for i in 0..w {          // i = image column (x)
-            for j in 0..h {      // j = image row (y)
-                let flat_idx = j * w + i; // row-major pixel at (col=i, row=j)
-                let c = if flat_idx < logo_chars.len() { logo_chars[flat_idx] } else { b' ' };
-                let color = if flat_idx < logo_colors.len() { logo_colors[flat_idx] } else { default_color };
-
-                let point_idx = start_idx + i * w + j; // matches generate: i * 100 + j
+        // Texture uploads retain the public 100×100 row-major contract.
+        // Sampling density is independent of texture resolution.
+        let samples = self.samples_per_axis;
+        for i in 0..samples {
+            for j in 0..samples {
+                let flat_idx = (j * 100 / samples) * 100 + i * 100 / samples;
+                let c = logo_chars.get(flat_idx).copied().unwrap_or(b' ');
+                let color = logo_colors.get(flat_idx).copied().unwrap_or(default_color);
+                let point_idx = start_idx + i * samples + j;
                 let pt = &mut self.points[point_idx];
                 if c != b' ' {
                     pt.character = c;
@@ -193,7 +194,7 @@ impl Cube {
     }
 
     fn generate_points_for_face(&mut self, face_index: usize) {
-        let dots_per_face: u64 = 100;
+        let dots_per_face = self.samples_per_axis as u64;
         let step = 2.0 / (dots_per_face as f32);
 
         let axes = [
@@ -210,7 +211,7 @@ impl Cube {
         let logo_height = face.logo.as_ref().map_or(0, |l| l.len());
         let logo_width = face.logo.as_ref().and_then(|l| l.first()).map_or(0, |r| r.len());
         
-        let start_idx = face_index * 10000;
+        let start_idx = face_index * self.samples_per_axis * self.samples_per_axis;
 
         for i in 0..dots_per_face {
             for j in 0..dots_per_face {
@@ -292,8 +293,9 @@ impl Cube {
                 continue;
             }
             
-            let start = face_idx * 10000;
-            let end = start + 10000;
+            let face_size = self.samples_per_axis * self.samples_per_axis;
+            let start = face_idx * face_size;
+            let end = start + face_size;
 
             for p in &self.points[start..end] {
                 let rot = self.rotation * p.pos;
