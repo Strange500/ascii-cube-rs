@@ -16,7 +16,7 @@
         };
 
         # Provide a rust toolchain with WASM target
-        rustToolchain = pkgs.rust-bin.stable.latest.default.override {
+        rustToolchain = pkgs.rust-bin.stable.latest.minimal.override {
           targets = [ "wasm32-unknown-unknown" ];
         };
 
@@ -60,6 +60,7 @@
           buildInputs = [
             rustToolchain
             pkgs.wasm-pack
+            pkgs.wasm-bindgen-cli
           ];
         };
       }

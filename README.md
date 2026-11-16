@@ -107,3 +107,23 @@ Use a `<pre>` element with `white-space: pre` and a monospace font for best resu
 
 This project is currently distributed without an explicit license file.
 Add a `LICENSE` file if you want to define usage and redistribution terms.
+
+## Sampling and regression checks
+
+`Cube::new` retains 100×100 samples per face for buffers up to 120 columns.
+Larger buffers use their column count (capped at 256) as the sampling width.
+The points, z-buffer projection and shared-memory API remain in Rust. Texture
+uploads through `update_face_fast` always remain 100×100, row-major; the engine
+resamples them onto its internal surface grid. Do not enlarge the texture upload
+just because the output buffer is larger.
+
+After `wasm-pack build --target web --mode no-install --release`, run:
+
+```sh
+node scripts/test-raster.mjs
+```
+
+This checks the legacy raster and texture contract, 720 orientations at
+200×100 / zoom 3300, and all four texture/color quadrants at that resolution.
+The Nix shell uses the minimal pinned stable Rust toolchain with the WASM target,
+so downloading the Rust HTML documentation is not required.
