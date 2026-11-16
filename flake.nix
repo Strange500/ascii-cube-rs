@@ -60,6 +60,7 @@
           buildInputs = [
             rustToolchain
             pkgs.wasm-pack
+            pkgs.wasm-bindgen-cli
           ];
         };
       }
